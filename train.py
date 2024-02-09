@@ -76,6 +76,22 @@ def dice_coef(y_true, y_pred):
 	eps = 0.0001
 	return (2. * intersection + eps) / (torch.sum(y_true_f, -1) + torch.sum(y_pred_f, -1) + eps)
 
+def transforms_validation(data_root, label_root, tf):
+
+	set_seed()
+
+	train_dataset = XRayDataset(is_train=True, 
+							 transforms=tf,
+							 image_root=data_root,
+							 label_root=label_root)
+
+	image, label = train_dataset[0]
+	fig, ax = plt.subplots(1, 2, figsize=(24, 12))
+	ax[0].imshow(image[0])    # color map 적용을 위해 channel 차원을 생략합니다.
+	ax[1].imshow(visualization.label2rgb(label))
+
+	plt.show()
+
 def validation(epoch, model, data_loader, criterion, thr=0.5, device='cpu'):
 	print(f'Start validation #{epoch:2d}')
 	model.eval()
