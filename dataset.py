@@ -30,13 +30,16 @@ def index_to_class(c2i):
 	i2c = {v: k for k, v in c2i.items()}
 	return i2c 
 
-def img_json_load(image_root, label_root):
+def img_json_load(image_root, label_root, is_inference=False):
 	pngs = {
 		os.path.relpath(os.path.join(root, fname), start=image_root)
 		for root, _dirs, files in os.walk(image_root)
 		for fname in files
 		if os.path.splitext(fname)[1].lower() == ".png"
 	} 
+
+	if is_inference:
+		return pngs, None
 
 	jsons = {
 		os.path.relpath(os.path.join(root, fname), start=label_root)
@@ -208,7 +211,7 @@ class XRayDataset(Dataset):
 
 class XRayInferenceDataset(Dataset):
 	def __init__(self, transforms=None, image_root='test/DCM', label_root='train/outputs_json'):
-		pngs, __ = img_json_load(image_root, label_root)
+		pngs, __ = img_json_load(image_root, label_root, is_inference=True)
 		_filenames = pngs
 		_filenames = np.array(sorted(_filenames))
 		
