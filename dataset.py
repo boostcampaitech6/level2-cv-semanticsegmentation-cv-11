@@ -27,8 +27,8 @@ def class_to_index(CLASSES):
 	return c2i
 
 def index_to_class(c2i):
-	CLASSES = {v: k for k, v in c2i.items()}
-	return CLASSES
+	i2c = {v: k for k, v in c2i.items()}
+	return i2c 
 
 def img_json_load(image_root, label_root):
 	pngs = {
@@ -207,7 +207,7 @@ class XRayDataset(Dataset):
 		return image, label
 
 class XRayInferenceDataset(Dataset):
-	def __init__(self, transforms=None, image_root='train/DCM', label_root='train/outputs_json'):
+	def __init__(self, transforms=None, image_root='test/DCM', label_root='train/outputs_json'):
 		pngs, __ = img_json_load(image_root, label_root)
 		_filenames = pngs
 		_filenames = np.array(sorted(_filenames))
