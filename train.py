@@ -25,7 +25,7 @@ from tqdm.auto import tqdm
 
 # Custom files
 import dataset
-from dataset import XRayDataset
+from dataset import XRayDataset, HardAugmentation, BaseAugmentation
 import visualization
 
 RANDOM_SEED = 2024
@@ -161,14 +161,15 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 
 	set_seed()
 
-	tf = A.Resize(512,512)
+	tf_train = HardAugmentation(img_size=1024, is_train=True).transforms
+	tf_valid = HardAugmentation(img_size=1024, is_train=False).transforms
 
 	train_dataset = XRayDataset(is_train=True, 
-							 transforms=tf,
+							 transforms=tf_train,
 							 image_root=data_root,
 							 label_root=label_root)
 	valid_dataset = XRayDataset(is_train=False,
-							 transforms=tf,
+							 transforms=tf_valid,
 							 image_root=data_root,
 							 label_root=label_root)
 

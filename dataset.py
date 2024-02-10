@@ -20,7 +20,7 @@ CLASSES = [
 	'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
 ]
 def classes():
-    return CLASSES
+	return CLASSES
 
 def class_to_index(CLASSES):
 	c2i = {v: i for i, v in enumerate(CLASSES)}
@@ -56,6 +56,58 @@ def img_json_load(image_root, label_root):
 	jsons = sorted(jsons)
 	return pngs, jsons
 	
+class BaseAugmentation(object):
+	def __init__(self, img_size, is_train):
+		self.is_train = is_train
+		self.img_size = img_size
+		self.transforms = self.get_transforms()
+
+	def __call__(self, image, label=None):
+		inputs = {"image": image}
+		if label is not None:
+			inputs["mask"] = label
+
+		if self.transforms is not None:
+			result = self.transforms(**inputs)
+			image = result["image"]
+			if label is not None:
+				label = result["mask"]
+
+		return image, label
+
+	def get_transforms(self):
+		if self.is_train:
+			return A.Compose(
+				[
+					A.Resize(self.img_size, self.img_size),
+				]
+			)
+		else:
+			return A.Compose(
+				[
+					A.Resize(self.img_size, self.img_size),
+				]
+			)
+
+class HardAugmentation(BaseAugmentation):
+	def get_transforms(self):
+		if self.is_train:
+			return A.Compose(
+				[
+					A.Resize(self.img_size, self.img_size),
+					# A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.1, p=0.7),
+					A.RandomResizedCrop(1024, 1024, scale=(0.5, 1.0), ratio=(1.0, 1.0), always_apply=False, p=1.0),
+					A.ElasticTransform(alpha=15.0, sigma=2.0),
+					A.OneOf([A.Blur(blur_limit=2, p=1.0), A.MedianBlur(blur_limit=3, p=1.0)], p=0.2),
+					A.HorizontalFlip(p=0.5),
+				]
+			)
+		else:
+			return A.Compose(
+				[
+					A.Resize(self.img_size, self.img_size),
+				]
+			)
  
 class XRayDataset(Dataset):
 	def __init__(self, is_train=True, transforms=None,
