@@ -52,6 +52,8 @@ def parse_args():
 
 	return args
 
+def to_tensor(x, **kwargs):
+    return x.transpose(2, 0, 1).astype('float32')
 
 def save_model(model, file_name='fcn_resnet50_best_model.pt', save_dir='trained_model'):
 	output_path = os.path.join(save_dir, file_name)
