@@ -22,11 +22,13 @@ import numpy as np
 import albumentations as A
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
+import wandb
 
 # Custom files
 import dataset
 from dataset import XRayDataset, HardAugmentation, BaseAugmentation
 import visualization
+import model as m
 
 RANDOM_SEED = 2024
 CLASSES = dataset.classes()
@@ -46,7 +48,7 @@ def parse_args():
 	parser.add_argument('--val_every', type=int, default=5)
 
 	parser.add_argument('--device', default=cuda.is_available())
-	# parser.add_argument('--save_wandb_name', type=str, default='ss')
+	parser.add_argument('--save_wandb_name', type=str, default='ss')
 
 	args = parser.parse_args()
 
@@ -157,7 +159,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, device='cpu'):
 	return avg_dice
 
 def do_training(data_root, label_root, save_dir, device, batch_size, 
-				learning_rate, num_epochs, val_every):
+				learning_rate, num_epochs, val_every, save_wandb_name):
 
 	set_seed()
 
@@ -172,13 +174,6 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 							 transforms=tf_valid,
 							 image_root=data_root,
 							 label_root=label_root)
-
-	image, label = train_dataset[0]
-	fig, ax = plt.subplots(1, 2, figsize=(24, 12))
-	ax[0].imshow(image[0])    # color map 적용을 위해 channel 차원을 생략합니다.
-	ax[1].imshow(visualization.label2rgb(label))
-
-	plt.savefig('test')
 
 	train_loader = DataLoader(
 		dataset=train_dataset, 
@@ -197,11 +192,20 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 		drop_last=False
 	)
 
+	wandb.init(project='segmentation')
+	wandb.run.name = save_wandb_name
+	wandb.config.update({
+			"learning_rate" : learning_rate,
+			"eochs" : num_epochs,
+			"batch_size" : batch_size	
+	})
+
 	device = torch.device('cuda:0' if device else 'cpu')
 	n_class = len(CLASSES)
-	model = models.segmentation.fcn_resnet50(weights=FCN_ResNet50_Weights.COCO_WITH_VOC_LABELS_V1)
-	# output class 개수를 dataset에 맞도록 수정합니다.
-	model.classifier[4] = nn.Conv2d(512, n_class, kernel_size=1)
+	model = m.fcn()
+	# model = models.segmentation.fcn_resnet50(weights=FCN_ResNet50_Weights.COCO_WITH_VOC_LABELS_V1)
+	# # output class 개수를 dataset에 맞도록 수정합니다.
+	# model.classifier[4] = nn.Conv2d(512, n_class, kernel_size=1)
 	model = model.to(device)
 
 	# Loss function을 정의합니다.
@@ -217,6 +221,10 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 	
 	for epoch in range(num_epochs):
 		model.train()
+		train_dict = {
+			'train_loss' : 0,
+			'evel_dice' : 0,
+		}
 
 		with tqdm(total=len(train_loader)) as pbar:
 			for step, (images, masks) in enumerate(train_loader):
