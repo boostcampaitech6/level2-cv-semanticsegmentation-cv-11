@@ -213,3 +213,4 @@ pyrightconfig.json
 test/
 train/
 *.pt
+*.csv
