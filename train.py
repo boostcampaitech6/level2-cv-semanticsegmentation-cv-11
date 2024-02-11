@@ -49,6 +49,7 @@ def parse_args():
 
 	parser.add_argument('--device', default=cuda.is_available())
 	parser.add_argument('--save_wandb_name', type=str, default='ss')
+	parser.add_argument('--model_name', type=str, default='fcn_resnet50')
 
 	args = parser.parse_args()
 
@@ -159,7 +160,7 @@ def validation(epoch, model, data_loader, criterion, thr=0.5, device='cpu'):
 	return avg_dice
 
 def do_training(data_root, label_root, save_dir, device, batch_size, 
-				learning_rate, num_epochs, val_every, save_wandb_name):
+				learning_rate, num_epochs, val_every, save_wandb_name, model_name):
 
 	set_seed()
 
@@ -202,10 +203,7 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 
 	device = torch.device('cuda:0' if device else 'cpu')
 	n_class = len(CLASSES)
-	model = m.fcn()
-	# model = models.segmentation.fcn_resnet50(weights=FCN_ResNet50_Weights.COCO_WITH_VOC_LABELS_V1)
-	# # output class 개수를 dataset에 맞도록 수정합니다.
-	# model.classifier[4] = nn.Conv2d(512, n_class, kernel_size=1)
+	model = m.create_model(model_name)
 	model = model.to(device)
 
 	# Loss function을 정의합니다.
@@ -221,6 +219,7 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 	
 	for epoch in range(num_epochs):
 		model.train()
+
 		train_dict = {
 			'train_loss' : 0,
 			'evel_dice' : 0,
@@ -232,7 +231,8 @@ def do_training(data_root, label_root, save_dir, device, batch_size,
 				images, masks = images.to(device), masks.to(device)
 				model = model.to(device)
 
-				outputs = model(images)['out']
+				# torchvision의 모델을 사용하는 경우, 'out' key로 해서 불러 와야 함. ex) outputs = model(images)['out']
+				outputs = model(images)
 				
 				# loss를 계산합니다.
 				loss = criterion(outputs, masks)
